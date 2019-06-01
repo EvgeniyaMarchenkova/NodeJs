@@ -112,6 +112,7 @@ function showHelpMsg() {
 }
 
 function buildCssBundler(folderTitle) {
+    debugger
     const fullPath = __dirname + '/' + folderTitle;
     fs.readdir(fullPath, (err, files) => {
         if (err) {

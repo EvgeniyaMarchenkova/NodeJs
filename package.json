@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon --exec babel-node app.js",
+    "start": "nodemon --exec babel-node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Evgeniya Marchenkova",
@@ -20,7 +20,11 @@
     "nodemon": "^1.19.0"
   },
   "dependencies": {
-    "@babel/node": "^7.2.2",
-    "csvtojson": "^2.0.8"
+    "@babel/node": "7.2.2",
+    "cookie-parser": "1.4.4",
+    "csvtojson": "2.0.8",
+    "express": "4.17.1",
+    "minimist": "1.2.0",
+    "through2": "3.0.1"
   }
 }
