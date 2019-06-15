@@ -158,3 +158,14 @@ passport.use(new TwitterStrategy({
         console.log('succeess authefication');
     }
 ));
+
+const Sequelize = require("sequelize");
+const sequelize = new Sequelize(
+    "epamnodejs",
+    "root",
+    "superpass123",
+    {
+        dialect: "postgres",
+        host: "db"
+    }
+);

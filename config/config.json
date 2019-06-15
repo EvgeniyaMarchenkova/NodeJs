@@ -1,3 +1,23 @@
 {
-  "appName": "Node.js Homework Application"
+  "development": {
+    "username": "root",
+    "password": "superpass123",
+    "database": "epamnodejs",
+    "host": "localhost",
+    "dialect": "postgres"
+  },
+  "test": {
+    "username": "root",
+    "password": "superpass123",
+    "database": "epamnodejs",
+    "host": "localhost",
+    "dialect": "postgres"
+  },
+  "production": {
+    "username": "root",
+    "password": "superpass123",
+    "database": "epamnodejs",
+    "host": "localhost",
+    "dialect": "postgres"
+  }
 }
