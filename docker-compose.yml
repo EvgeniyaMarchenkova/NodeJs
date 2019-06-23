@@ -1,0 +1,43 @@
+version: '3'
+
+services:
+  db:
+    image: mdillon/postgis
+#    volumes:
+#      - ./database:/var/lib/postgresql/data/pgdata
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: epam
+      POSTGRES_PASSWORD: secretpass123
+      POSTGRES_DB: epam
+#      PGDATA: /var/lib/postgresql/data/pgdata
+
+  node:
+    image: "node:10.16.0-jessie"
+    user: "node"
+    working_dir: /home/node/app
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - ./:/home/node/app
+    ports:
+      - 80:3000
+    command: "npm start"
+    tty: true
+
+  mongo:
+    image: mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: epam
+      MONGO_INITDB_ROOT_PASSWORD: secretpass123
+
+  mongo-express:
+    image: mongo-express
+    restart: always
+    ports:
+      - 8081:8081
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: epam
+      ME_CONFIG_MONGODB_ADMINPASSWORD: secretpass123

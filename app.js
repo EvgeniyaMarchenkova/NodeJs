@@ -1,6 +1,7 @@
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const passport = require('passport');
+const bodyParser = require("body-parser");
 const LocalStrategy = require('passport-local').Strategy;
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const FacebookStrategy = require('passport-facebook').Strategy;
@@ -15,8 +16,8 @@ import { Importer } from './importer';
 const userId = 'firstUser';
 const password = '123';
 
-const user = new Models.User();
-const product = new Models.Product();
+// const user = new Models.User();
+// const product = new Models.Product();
 const dirWatcher = new DirWatcher();
 const importer = new Importer();
 dirWatcher.watch('/data', 1000);
@@ -24,6 +25,9 @@ dirWatcher.watch('/data', 1000);
 export const app = express();
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+const parser = bodyParser.urlencoded({extended: false});
+
+app.use(bodyParser());
 
 app
     .use('/api', router)
@@ -39,8 +43,12 @@ router.get('/products', passport.authenticate('local', { session: false }), func
     res.send('all products');
 });
 
-router.post('/products', checkToken, function (req, res) {
-    res.send('post product');
+router.post('/products', parser, function (req, res) {
+    if(!req.body) {
+        return res.sendStatus(400);
+    }
+    console.log(req);
+    res.send(req.body);
 });
 
 router.get('/users',passport.authenticate('google', { scope: ['profile'] }), function (req, res) {

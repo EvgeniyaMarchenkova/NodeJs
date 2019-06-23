@@ -1,9 +1,10 @@
 {
   "development": {
-    "username": "root",
-    "password": "superpass123",
-    "database": "epamnodejs",
+    "username": "postgres",
+    "password": "secretpass123",
+    "database": "epam",
     "host": "localhost",
+    "port": 5432,
     "dialect": "postgres"
   },
   "test": {
