@@ -1,24 +1,24 @@
 {
   "development": {
-    "username": "postgres",
+    "username": "epam",
     "password": "secretpass123",
     "database": "epam",
-    "host": "localhost",
+    "host": "127.0.0.1",
     "port": 5432,
     "dialect": "postgres"
   },
   "test": {
-    "username": "root",
-    "password": "superpass123",
-    "database": "epamnodejs",
+    "username": "epam",
+    "password": "secretpass123",
+    "database": "epam",
     "host": "localhost",
     "dialect": "postgres"
   },
   "production": {
-    "username": "root",
-    "password": "superpass123",
-    "database": "epamnodejs",
-    "host": "localhost",
+    "username": "epam",
+    "password": "secretpass123",
+    "database": "epam",
+    "host": "db",
     "dialect": "postgres"
   }
 }

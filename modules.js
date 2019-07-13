@@ -1,4 +1,4 @@
-import { User } from './models/User';
+import { User } from './models/user';
 import { Product } from './models/product';
 
 export const Models = {

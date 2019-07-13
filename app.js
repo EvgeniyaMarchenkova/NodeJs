@@ -7,7 +7,7 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const FacebookStrategy = require('passport-facebook').Strategy;
 const TwitterStrategy = require('passport-twitter').Strategy;
 import * as config from './config/config.json';
-import { Models } from './modules.js';
+const models = require('./models');
 import { DirWatcher } from './dirwatcher';
 import { Importer } from './importer';
 
@@ -20,7 +20,7 @@ const password = '123';
 // const product = new Models.Product();
 const dirWatcher = new DirWatcher();
 const importer = new Importer();
-dirWatcher.watch('/data', 1000);
+//dirWatcher.watch('/data', 1000);
 
 export const app = express();
 const router = express.Router();
@@ -35,20 +35,33 @@ app
     .use(express.query('parsedQuery'));
 
 router.get('/', function (req, res) {
-    //res.send(app._router.stack);
     res.send(' home page');
 });
 
 router.get('/products', passport.authenticate('local', { session: false }), function (req, res) {
-    res.send('all products');
+    models.Product.findAll().then(products => {
+        res.send(JSON.stringify(products, null, 4));
+    });
 });
 
 router.post('/products', parser, function (req, res) {
     if(!req.body) {
         return res.sendStatus(400);
     }
-    console.log(req);
-    res.send(req.body);
+    models.Product.create({ 
+        NAME: req.body.name,
+        PRICE: req.body.price,
+        BRAND: req.body.brand,
+        COLOR: req.body.color,
+        SIZE: req.body.size
+    })
+    .then(() => {
+        res.send('product was added');
+    })
+    .catch((err) => {
+        console.log(err);
+        res.send('product was not added');
+    });
 });
 
 router.get('/users',passport.authenticate('google', { scope: ['profile'] }), function (req, res) {
@@ -56,7 +69,9 @@ router.get('/users',passport.authenticate('google', { scope: ['profile'] }), fun
 });
 
 router.get('/products/:id', passport.authenticate('facebook'), function (req, res) {
-    res.send(req.params.id);
+    models.Product.findByPk(req.params.id).then(product => {
+        res.send(product);
+    });
 });
 
 app.get('/products/:id/reviews', checkToken, function (req, res) {
@@ -68,7 +83,6 @@ app.get('/products/:id/reviews', checkToken, function (req, res) {
 app.post('/auth',
     passport.authenticate('local'),
     function (req, res) {
-        console.log(2);
         if (userId) {
             const token = jwt.sign({ _id: userId }, 'aaa');
             res.status(200)
@@ -141,21 +155,20 @@ passport.use(new FacebookStrategy({
         callbackURL: "http://localhost:4200/api/auth/facebook/callback"
     },
     function(accessToken, refreshToken, profile, cb) {
-        User.findOrCreate({ facebookId: profile.id }, function (err, user) {
-            return cb(err, user);
-        });
+        console.log('succeess authefication');
     }
 ));
+//
+// app.get('/api/auth/facebook/callback',
+//     passport.authenticate('facebook', { failureRedirect: '/login' }),
+//     function(req, res) {
+//         // Successful authentication, redirect home.
+//         res.redirect('/');
+//     });
 
-app.get('/api/auth/facebook/callback',
-    passport.authenticate('facebook', { failureRedirect: '/login' }),
-    function(req, res) {
-        // Successful authentication, redirect home.
-        res.redirect('/');
-    });
-
-
-
+app.get('/auth/facebook/callback',
+    passport.authenticate('facebook', { successRedirect: '/',
+        failureRedirect: '/login' }));
 
 passport.use(new TwitterStrategy({
         consumerKey: 'TWITTER_CONSUMER_KEY',
@@ -169,11 +182,23 @@ passport.use(new TwitterStrategy({
 
 const Sequelize = require("sequelize");
 const sequelize = new Sequelize(
-    "epamnodejs",
-    "root",
-    "superpass123",
+    "epam",
+    "epam",
+    "secretpass123",
     {
         dialect: "postgres",
         host: "db"
     }
 );
+
+sequelize
+  .authenticate()
+  .then(() => {
+    console.log('Connection has been established successfully.');
+  })
+  .catch(err => {
+    console.error('Unable to connect to the database:', err);
+  });
+
+sequelize.sync();
+
