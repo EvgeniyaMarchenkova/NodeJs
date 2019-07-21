@@ -2,25 +2,16 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 const passport = require('passport');
 const bodyParser = require("body-parser");
+const session = require('express-session');
+const MongoStore = require('connect-mongo')(session);
 const LocalStrategy = require('passport-local').Strategy;
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const FacebookStrategy = require('passport-facebook').Strategy;
 const TwitterStrategy = require('passport-twitter').Strategy;
-import * as config from './config/config.json';
 const models = require('./models');
-import { DirWatcher } from './dirwatcher';
-import { Importer } from './importer';
-
-// console.log(config.appName);
-
-const userId = 'firstUser';
-const password = '123';
-
-// const user = new Models.User();
-// const product = new Models.Product();
-const dirWatcher = new DirWatcher();
-const importer = new Importer();
-//dirWatcher.watch('/data', 1000);
+const UserModel = require('./models/user').User;
+const ProductModel = require('./models/product').Product;
+const mongoose = require('mongoose');
 
 export const app = express();
 const router = express.Router();
@@ -30,25 +21,47 @@ const parser = bodyParser.urlencoded({extended: false});
 app.use(bodyParser());
 
 app
-    .use('/api', router)
     .use(cookieParser('parsedCookies'))
-    .use(express.query('parsedQuery'));
+    .use(bodyParser.json())
+    .use(express.query('parsedQuery'))
+    .use(session({
+        secret: 'foo',
+        store: new MongoStore({
+            url: 'mongodb://localhost/test',
+            collection: 'sessions'
+        })
+    }))
+    .use(passport.initialize())
+    .use(passport.session())
+    .use('/api', router);
+
+
+
+
+mongoose.connect('mongodb://localhost/test', {useNewUrlParser: true});
+const db = mongoose.connection;
+db.on('error', console.error.bind(console, 'connection error:'));
+db.once('open', function() {
+    console.log('connected');
+});
 
 router.get('/', function (req, res) {
     res.send(' home page');
 });
 
-router.get('/products', passport.authenticate('local', { session: false }), function (req, res) {
-    models.Product.findAll().then(products => {
+router.get('/products', function (req, res) {
+    console.log(models);
+    ProductModel.find(function (err, products) {
+        if (err) return console.error(err);
         res.send(JSON.stringify(products, null, 4));
-    });
+    })
 });
 
 router.post('/products', parser, function (req, res) {
     if(!req.body) {
         return res.sendStatus(400);
     }
-    models.Product.create({ 
+    ProductModel.create({
         NAME: req.body.name,
         PRICE: req.body.price,
         BRAND: req.body.brand,
@@ -64,12 +77,23 @@ router.post('/products', parser, function (req, res) {
     });
 });
 
-router.get('/users',passport.authenticate('google', { scope: ['profile'] }), function (req, res) {
-    res.send('users');
+router.get('/users', userIsLoggedIn, function (req, res) {
+    UserModel.find({}).lean().exec(function (err, users) {
+        let elements = users.map((user) => {
+            let element  = {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                currentUser: user._id == req.user.id
+            };
+            return element;
+        });
+        return res.end(JSON.stringify(elements));
+    });
 });
 
 router.get('/products/:id', passport.authenticate('facebook'), function (req, res) {
-    models.Product.findByPk(req.params.id).then(product => {
+    ProductModel.findByPk(req.params.id).then(product => {
         res.send(product);
     });
 });
@@ -117,6 +141,29 @@ function checkToken(req, res, next) {
     }
 }
 
+router.get('/logout', function(req, res) {
+    req.logout();
+    res.redirect('/');
+});
+
+router.get('/auth/google', passport.authenticate('google', {scope: ['profile', 'email']}), function (req, res) {
+});
+
+passport.serializeUser(function(user, done) {
+    return done(null, user._id);
+});
+
+passport.deserializeUser(function(id, done) {
+    //return done(null, id);
+    UserModel.findById(id, function (err, user) {
+        if(user) {
+            return done(null, user);
+        } else {
+            return done(err, false);
+        }
+    });
+});
+
 passport.use(new LocalStrategy(
     {usernameField:"user-email", passwordField:"user-password"},
     function(username, password, done) {
@@ -134,10 +181,21 @@ passport.use(new LocalStrategy(
 passport.use(new GoogleStrategy({
         clientID: '470973981179-9gdjl13mm0daefhsrdkpgsrvg284ptfu.apps.googleusercontent.com',
         clientSecret: 'IOF5yBBfUIV8LIEkIW8CQoZD',
-        callbackURL: "http://localhost:4200/auth/google/callback"
+        callbackURL: "http://127.0.0.1:3000/auth/google/callback"
     },
-    function(accessToken, refreshToken, profile, cb) {
+    function(accessToken, refreshToken, profile, done) {
+    console.log(profile);
         console.log('succeess authefication');
+        UserModel.findOne({ googleId: profile.id }, function (err, user) {
+            if (user) {
+                return done(null, user);
+            } else {
+                UserModel.create({googleId: profile.id, name: profile.displayName, email: profile.emails[0].value}, function (err, user) {
+                    console.log(user);
+                    return done(null, user);
+                });
+            }
+        });
     }
 ));
 
@@ -145,8 +203,10 @@ passport.use(new GoogleStrategy({
 app.get('/auth/google/callback',
     passport.authenticate('google', { failureRedirect: '/login' }),
     function(req, res) {
+        console.log(req.sessionID)
         // Successful authentication, redirect home.
-        res.redirect('/users');
+
+        res.redirect('/api/users');
     });
 
 passport.use(new FacebookStrategy({
@@ -180,25 +240,16 @@ passport.use(new TwitterStrategy({
     }
 ));
 
-const Sequelize = require("sequelize");
-const sequelize = new Sequelize(
-    "epam",
-    "epam",
-    "secretpass123",
-    {
-        dialect: "postgres",
-        host: "db"
+app._router.stack.forEach(function(r){
+    if (r.route && r.route.path){
+        console.log(r.route.path)
     }
-);
+})
 
-sequelize
-  .authenticate()
-  .then(() => {
-    console.log('Connection has been established successfully.');
-  })
-  .catch(err => {
-    console.error('Unable to connect to the database:', err);
-  });
+function userIsLoggedIn(req, res, next) {
+    if (req.isAuthenticated())
+        return next();
+    res.redirect('/api/auth/google');
+}
 
-sequelize.sync();
 
